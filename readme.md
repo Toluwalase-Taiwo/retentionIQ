@@ -4,6 +4,10 @@ RetentionIQ is a machine learning dashboard that helps SaaS teams understand cus
 
 The project combines exploratory data analysis, churn prediction, and a Streamlit dashboard to turn customer behaviour data into practical retention insights.
 
+## Live Demo
+
+[Open RetentionIQ Dashboard](https://retentioniqdashboard.streamlit.app/)
+
 ## Project Overview
 
 Customer churn is a major problem for SaaS businesses. When customers stop using a product or cancel their subscription, the business loses revenue and growth becomes harder.
