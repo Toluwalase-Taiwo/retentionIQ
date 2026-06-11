@@ -449,6 +449,24 @@ elif risk_level == "Medium Risk":
 else:
     st.success(recommendation)
 
+with st.expander("About this prediction"):
+    st.markdown(
+        """
+        This prediction is based on a machine learning model trained on customer behaviour data.
+
+        The model looks at signals such as:
+
+        - How active the customer has been recently
+        - How many product features they use
+        - Whether they completed training
+        - Whether they had billing problems
+        - How many support requests they made
+        - Their plan type and subscription age
+
+        The score is not a final decision. It is a guide to help teams know which customers may need attention earlier.
+        """
+    )
+
 st.subheader("Customer Data Preview")
 preview_columns = [
     "customer_id",
