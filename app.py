@@ -432,9 +432,22 @@ if submitted:
             "This customer looks relatively healthy. Keep supporting their product usage."
         )
 
+st.subheader("Prediction Result")
+
+result_col1, result_col2 = st.columns(2)
+
+with result_col1:
     st.metric("Churn Risk Score", f"{churn_probability:.1f}%")
-    st.info(f"Risk Level: {risk_level}")
-    st.write(f"Recommended Action: {recommendation}")
+
+with result_col2:
+    st.metric("Risk Level", risk_level)
+
+if risk_level == "High Risk":
+    st.error(recommendation)
+elif risk_level == "Medium Risk":
+    st.warning(recommendation)
+else:
+    st.success(recommendation)
 
 st.subheader("Customer Data Preview")
 preview_columns = [
