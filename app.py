@@ -143,7 +143,7 @@ fig_plan = px.bar(
 fig_plan.update_traces(texttemplate="%{text}%", textposition="outside")
 fig_plan.update_layout(yaxis_range=[0, churn_by_plan["churn_rate"].max() + 10])
 
-st.plotly_chart(fig_plan, use_container_width=True)
+st.plotly_chart(fig_plan, width='stretch')
 
 st.subheader("Churn Rate by Customer Activity")
 
