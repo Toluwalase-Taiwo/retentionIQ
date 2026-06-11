@@ -47,10 +47,14 @@ st.markdown(
 def load_data():
     return pd.read_csv("data/saas_churn_data.csv")
 
+from pathlib import path
 @st.cache_resource
 def load_model():
-    model = joblib.load("models/churn_model.pkl")
-    model_features = joblib.load("models/model_features.pkl")
+    base_dir = Path(__file__).resolve().parent
+
+    model = joblib.load(base_dir / "models" / "churn_model.pkl")
+    model_features = joblib.load(base_dir / "models" / "model_features.pkl")
+
     return model, model_features
 
 df = load_data()
