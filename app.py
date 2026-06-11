@@ -38,6 +38,12 @@ df["activity_level"] = pd.cut(
     labels=["Low Activity", "Medium Activity", "High Activity"]
 )
 
+df["feature_usage_level"] = pd.cut(
+    df["features_used"],
+    bins=[0, 2, 6, 10],
+    labels=["Low Feature Usage", "Medium Feature Usage", "High Feature Usage"]
+)
+
 # Sidebar filters
 st.sidebar.header("Filters")
 
@@ -174,6 +180,39 @@ st.plotly_chart(fig_activity, use_container_width=True)
 
 st.info(
     "Customers with low activity are more likely to leave. This helps teams know which customers may need attention early."
+)
+
+st.subheader("Churn Rate by Feature Usage")
+
+churn_by_feature_usage = (
+    filtered_df.groupby("feature_usage_level")["churned"]
+    .mean()
+    .reset_index()
+)
+
+churn_by_feature_usage["churn_rate"] = churn_by_feature_usage["churned"] * 100
+
+fig_feature_usage = px.bar(
+    churn_by_feature_usage,
+    x="feature_usage_level",
+    y="churn_rate",
+    text=churn_by_feature_usage["churn_rate"].round(1),
+    labels={
+        "feature_usage_level": "Feature Usage",
+        "churn_rate": "Churn Rate (%)"
+    },
+    title="Percentage of Customers Who Left by Feature Usage"
+)
+
+fig_feature_usage.update_traces(texttemplate="%{text}%", textposition="outside")
+fig_feature_usage.update_layout(
+    yaxis_range=[0, churn_by_feature_usage["churn_rate"].max() + 10]
+)
+
+st.plotly_chart(fig_feature_usage, use_container_width=True)
+
+st.info(
+    "Customers who use fewer features are more likely to leave. This suggests that helping customers discover and use more features can improve retention."
 )
 
 st.subheader("Dataset Preview")
