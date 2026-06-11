@@ -122,6 +122,48 @@ filtered_df = df[
     (df["billing_status"].isin(selected_billing))
 ]
 
+def add_churn_risk_scores(customer_data):
+    model_input_columns = [
+        "plan_type",
+        "company_size",
+        "days_active_last_30",
+        "last_login_days_ago",
+        "features_used",
+        "team_members_added",
+        "support_tickets",
+        "billing_issues",
+        "subscription_age_months",
+        "emails_opened_last_30",
+        "training_completed",
+        "monthly_fee"
+    ]
+
+    scored_customers = customer_data.copy()
+
+    model_input = scored_customers[model_input_columns]
+    model_input_encoded = pd.get_dummies(model_input)
+
+    model_input_encoded = model_input_encoded.reindex(
+        columns=model_features,
+        fill_value=0
+    )
+
+    scored_customers["churn_risk_score"] = (
+        model.predict_proba(model_input_encoded)[:, 1] * 100
+    )
+
+    scored_customers["risk_level"] = scored_customers["churn_risk_score"].apply(
+        lambda score: "High Risk" if score >= 70 else "Medium Risk" if score >= 40 else "Low Risk"
+    )
+
+    scored_customers["recommended_action"] = scored_customers["risk_level"].map({
+        "High Risk": "Reach out urgently and help the customer resolve blockers.",
+        "Medium Risk": "Monitor closely and encourage stronger product usage.",
+        "Low Risk": "Keep engaging and supporting the customer."
+    })
+
+    return scored_customers
+
 st.title("RetentionIQ: SaaS Churn and Revenue Risk Dashboard")
 
 st.markdown(
@@ -135,8 +177,8 @@ st.info(
     "Use the filters on the left to explore different customer groups. The filters apply to the Overview, Insights, and Customer Data tabs."
 )
 
-overview_tab, insights_tab, prediction_tab, data_tab = st.tabs(
-    ["Overview", "Insights", "Predict Risk", "Customer Data"]
+overview_tab, insights_tab, at_risk_tab, prediction_tab, data_tab = st.tabs(
+    ["Overview", "Insights", "At-Risk Customers", "Predict Risk", "Customer Data"]
 )
 
 with overview_tab:
@@ -612,6 +654,63 @@ with prediction_tab:
                 The score is not a final decision. It is a guide to help teams know which customers may need attention earlier.
                 """
             )
+
+with at_risk_tab:
+    st.subheader("Top At-Risk Customers")
+
+    st.markdown(
+        """
+        This section ranks customers by their predicted churn risk score.
+
+        It helps teams know which customers may need attention first.
+        """
+    )
+
+    scored_customers = add_churn_risk_scores(filtered_df)
+
+    top_risk_customers = scored_customers.sort_values(
+        by="churn_risk_score",
+        ascending=False
+    ).head(20)
+
+    display_columns = [
+        "customer_id",
+        "plan_type",
+        "company_size",
+        "activity_level",
+        "feature_usage_level",
+        "training_status",
+        "billing_status",
+        "support_tickets",
+        "monthly_fee",
+        "churn_risk_score",
+        "risk_level",
+        "recommended_action"
+    ]
+
+    top_risk_customers_display = top_risk_customers[display_columns].copy()
+
+    top_risk_customers_display["churn_risk_score"] = (
+        top_risk_customers_display["churn_risk_score"].round(1).astype(str) + "%"
+    )
+
+    st.dataframe(
+        top_risk_customers_display,
+        use_container_width=True
+    )
+
+    csv = top_risk_customers_display.to_csv(index=False)
+
+    st.download_button(
+        label="Download Top At-Risk Customers",
+        data=csv,
+        file_name="top_at_risk_customers.csv",
+        mime="text/csv"
+    )
+
+    st.info(
+        "Use this list as a starting point for customer success follow-up. The highest-risk customers should be reviewed first."
+    )
  
 
 with data_tab:
