@@ -28,6 +28,24 @@ RetentionIQ helps answer questions such as:
 * Suggested retention action
 * Customer data preview with simple labels for non-technical users
 
+## Dashboard Screenshots
+
+### Overview
+
+![Overview Dashboard](images/overview.png)
+
+### Insights
+
+![Churn Insights](images/insights.png)
+
+### Prediction
+
+![Churn Prediction](images/prediction.png)
+
+### Customer Data
+
+![Customer Data](images/customer_data.png)
+
 ## Dataset
 
 The project uses a synthetic SaaS customer dataset with 2,000 customer records.
