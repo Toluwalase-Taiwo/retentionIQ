@@ -47,7 +47,7 @@ st.markdown(
 def load_data():
     return pd.read_csv("data/saas_churn_data.csv")
 
-from pathlib import path
+from pathlib import Path    
 @st.cache_resource
 def load_model():
     base_dir = Path(__file__).resolve().parent
