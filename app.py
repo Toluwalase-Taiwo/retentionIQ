@@ -202,8 +202,9 @@ with overview_tab:
             1. Use the filters on the left to focus on a customer group.
             2. Check the summary numbers to see what is happening.
             3. Open the Insights tab to see churn patterns.
-            4. Open the Predict Risk tab to estimate a customer's churn risk.
-            5. Open the Customer Data tab to view the customer records.
+            4. Open Top At Risk tab to see top 20 customers at risk and why
+            5. Open the Predict Risk tab to estimate a customer's churn risk.
+            6. Open the Customer Data tab to view the customer records.
 
             **Simple meanings:**
 
