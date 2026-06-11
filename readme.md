@@ -26,11 +26,14 @@ RetentionIQ helps answer questions such as:
 * Sidebar filters for customer groups
 * KPI cards for customer and revenue summary
 * Churn insights by plan type, activity level, feature usage, training status, and billing status
+* Top at-risk customers ranking
+* Downloadable list of high-risk customers
 * Machine learning churn prediction form
 * Churn risk score
 * Risk level classification
 * Suggested retention action
 * Customer data preview with simple labels for non-technical users
+
 
 ## Dashboard Screenshots
 
@@ -41,6 +44,10 @@ RetentionIQ helps answer questions such as:
 ### Insights
 
 ![Churn Insights](images/insights.png)
+
+### At-Risk Customers
+
+![At-Risk Customers](images/atrisk-customers.png)
 
 ### Prediction
 
@@ -105,7 +112,7 @@ For this reason, recall was more important than accuracy for this project.
 
 ## Dashboard Structure
 
-The dashboard is organised into four sections:
+The dashboard is organised into five sections:
 
 ### Overview
 
@@ -126,6 +133,12 @@ Shows churn patterns across customer groups, including:
 * Feature usage
 * Training status
 * Billing status
+
+### At-Risk Customers
+
+Ranks customers by their predicted churn risk score.
+
+This helps customer success teams quickly identify which customers may need attention first. The table includes each customer's risk level and a suggested action. Users can also download the top at-risk customers as a CSV file.
 
 ### Predict Risk
 
@@ -183,12 +196,14 @@ RetentionIQ/
 │
 └── images/
 ```
-
 ## Business Value
 
 RetentionIQ is designed to help SaaS teams move from reactive churn management to proactive customer retention.
 
-Instead of waiting until customers leave, teams can use the dashboard to spot warning signs early and take action.
+Instead of waiting until customers leave, teams can use the dashboard to spot warning signs early, understand which behaviours are linked to churn, and prioritise customers who may need support.
+
+The at-risk customer ranking makes the dashboard more actionable by showing which customers should be reviewed first.
+
 
 ## Tools Used
 
