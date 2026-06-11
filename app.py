@@ -215,6 +215,71 @@ st.info(
     "Customers who use fewer features are more likely to leave. This suggests that helping customers discover and use more features can improve retention."
 )
 
+st.subheader("Churn Rate by Training and Billing Status")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    churn_by_training = (
+        filtered_df.groupby("training_status")["churned"]
+        .mean()
+        .reset_index()
+    )
+
+    churn_by_training["churn_rate"] = churn_by_training["churned"] * 100
+
+    fig_training = px.bar(
+        churn_by_training,
+        x="training_status",
+        y="churn_rate",
+        text=churn_by_training["churn_rate"].round(1),
+        labels={
+            "training_status": "Training Status",
+            "churn_rate": "Churn Rate (%)"
+        },
+        title="Customers Who Left by Training Status"
+    )
+
+    fig_training.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig_training.update_layout(
+        yaxis_range=[0, churn_by_training["churn_rate"].max() + 10]
+    )
+
+    st.plotly_chart(fig_training, use_container_width=True)
+
+with col2:
+    churn_by_billing = (
+        filtered_df.groupby("billing_status")["churned"]
+        .mean()
+        .reset_index()
+    )
+
+    churn_by_billing["churn_rate"] = churn_by_billing["churned"] * 100
+
+    fig_billing = px.bar(
+        churn_by_billing,
+        x="billing_status",
+        y="churn_rate",
+        text=churn_by_billing["churn_rate"].round(1),
+        labels={
+            "billing_status": "Billing Status",
+            "churn_rate": "Churn Rate (%)"
+        },
+        title="Customers Who Left by Billing Status"
+    )
+
+    fig_billing.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig_billing.update_layout(
+        yaxis_range=[0, churn_by_billing["churn_rate"].max() + 10]
+    )
+
+    st.plotly_chart(fig_billing, use_container_width=True)
+
+st.info(
+    "Customers who do not complete training or have billing problems are more likely to leave. "
+    "This shows that onboarding and payment experience are important for retention."
+)
+
 st.subheader("Dataset Preview")
 preview_columns = [
     "customer_id",
