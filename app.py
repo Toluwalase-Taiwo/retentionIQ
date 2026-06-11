@@ -11,6 +11,38 @@ st.set_page_config(
 )
 
 
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .kpi-card {
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+    }
+
+    .kpi-label {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 6px;
+    }
+
+    .kpi-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 @st.cache_data
 def load_data():
     return pd.read_csv("data/saas_churn_data.csv")
@@ -86,399 +118,524 @@ filtered_df = df[
     (df["billing_status"].isin(selected_billing))
 ]
 
-
 st.title("RetentionIQ: SaaS Churn and Revenue Risk Dashboard")
 
-st.write(
-    "RetentionIQ helps SaaS teams understand churn patterns, monitor customer risk signals, "
-    "and make better retention decisions using product usage and customer behaviour data."
+st.markdown(
+    """
+    A dashboard that helps SaaS teams understand why customers leave, monitor revenue risk,
+    and identify customers who may need attention.
+    """
 )
 
-with st.expander("How to use this dashboard"):
+st.info(
+    "Use the filters on the left to explore different customer groups. The filters apply to the Overview, Insights, and Customer Data tabs."
+)
+
+overview_tab, insights_tab, prediction_tab, data_tab = st.tabs(
+    ["Overview", "Insights", "Predict Risk", "Customer Data"]
+)
+
+with overview_tab:
+    st.subheader("Dashboard Overview")
+
     st.markdown(
         """
-        This dashboard helps you understand which customers are more likely to churn and what factors may be causing it.
+        RetentionIQ helps teams quickly understand customer churn, revenue risk, and the warning signs that may show a customer is likely to leave.
 
-        **How to use it:**
-
-        1. Use the filters on the left sidebar to focus on specific customer groups.
-        2. Check the key metrics to see the total customers, churn rate, and revenue at risk.
-        3. Review the dataset preview to see the type of customer records being analysed.
-        4. Look for patterns across plan type, training status, billing status, and support activity.
-
-        **What the labels mean:**
-
-        - **Active Customer**: A customer who has not churned.
-        - **Churned Customer**: A customer who has stopped using or cancelled the product.
-        - **Training Completed**: The customer completed onboarding or product training.
-        - **Has Billing Issues**: The customer experienced billing or payment-related problems.
-        - **Revenue Lost**: Monthly revenue linked to customers who churned.
+        Use the filters on the left to focus on a specific customer group.
         """
     )
 
-st.subheader("Key Metrics")
+    with st.expander("How to use this dashboard"):
+        st.markdown(
+            """
+            This dashboard helps you see which customers may be at risk of leaving.
 
-total_customers = len(filtered_df)
-churned_customers = filtered_df["churned"].sum()
-churn_rate = filtered_df["churned"].mean() * 100
-monthly_revenue = filtered_df["monthly_fee"].sum()
-revenue_lost = filtered_df.loc[filtered_df["churned"] == 1, "monthly_fee"].sum()
+            **How to use it:**
 
-col1, col2, col3, col4, col5 = st.columns(5)
+            1. Use the filters on the left to focus on a customer group.
+            2. Check the summary numbers to see what is happening.
+            3. Open the Insights tab to see churn patterns.
+            4. Open the Predict Risk tab to estimate a customer's churn risk.
+            5. Open the Customer Data tab to view the customer records.
 
-col1.metric("Total Customers", f"{total_customers:,}")
-col2.metric("Churned Customers", f"{churned_customers:,}")
-col3.metric("Churn Rate", f"{churn_rate:.1f}%")
-col4.metric("Monthly Revenue", f"${monthly_revenue:,.0f}")
-col5.metric("Revenue Lost", f"${revenue_lost:,.0f}")
+            **Simple meanings:**
 
-st.subheader("Churn Rate by Plan Type")
+            - **Active Customer**: Still using the product.
+            - **Churned Customer**: Has left or stopped using the product.
+            - **Churn Rate**: Percentage of customers who left.
+            - **Revenue Lost**: Money lost from customers who left.
+            """
+        )
 
-churn_by_plan = (
-    filtered_df.groupby("plan_type")["churned"]
-    .mean()
-    .reset_index()
-)
+    st.subheader("Key Metrics")
 
-churn_by_plan["churn_rate"] = churn_by_plan["churned"] * 100
+    if filtered_df.empty:
+        st.warning("No customers match the selected filters. Please adjust the filters on the left.")
+    else:
+        total_customers = len(filtered_df)
+        churned_customers = int(filtered_df["churned"].sum())
+        churn_rate = filtered_df["churned"].mean() * 100
+        monthly_revenue = filtered_df["monthly_fee"].sum()
+        revenue_lost = filtered_df.loc[
+            filtered_df["churned"] == 1,
+            "monthly_fee"
+        ].sum()
 
-fig_plan = px.bar(
-    churn_by_plan,
-    x="plan_type",
-    y="churn_rate",
-    text=churn_by_plan["churn_rate"].round(1),
-    labels={
-        "plan_type": "Plan Type",
-        "churn_rate": "Churn Rate (%)"
-    },
-    title="Percentage of Customers Who Left by Plan"
-)
+        col1, col2, col3 = st.columns(3)
 
-fig_plan.update_traces(texttemplate="%{text}%", textposition="outside")
-fig_plan.update_layout(yaxis_range=[0, churn_by_plan["churn_rate"].max() + 10])
+        with col1:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Customers</div>
+                    <div class="kpi-value">{total_customers:,}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-st.plotly_chart(fig_plan, width='stretch')
+        with col2:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">Churned Customers</div>
+                    <div class="kpi-value">{churned_customers:,}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-st.subheader("Churn Rate by Customer Activity")
+        with col3:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">Churn Rate</div>
+                    <div class="kpi-value">{churn_rate:.1f}%</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-churn_by_activity = (
-    filtered_df.groupby("activity_level")["churned"]
-    .mean()
-    .reset_index()
-)
+        col4, col5 = st.columns(2)
 
-churn_by_activity["churn_rate"] = churn_by_activity["churned"] * 100
+        with col4:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">Monthly Revenue</div>
+                    <div class="kpi-value">${monthly_revenue:,.0f}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-fig_activity = px.bar(
-    churn_by_activity,
-    x="activity_level",
-    y="churn_rate",
-    text=churn_by_activity["churn_rate"].round(1),
-    labels={
-        "activity_level": "Customer Activity",
-        "churn_rate": "Churn Rate (%)"
-    },
-    title="Percentage of Customers Who Left by Activity Level"
-)
+        with col5:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">Revenue Lost</div>
+                    <div class="kpi-value">${revenue_lost:,.0f}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-fig_activity.update_traces(texttemplate="%{text}%", textposition="outside")
-fig_activity.update_layout(yaxis_range=[0, churn_by_activity["churn_rate"].max() + 10])
+        st.subheader("What to Look At First")
 
-st.plotly_chart(fig_activity, use_container_width=True)
+        st.info(
+                """
+                Start with the churn rate and revenue lost.
 
-st.info(
-    "Customers with low activity are more likely to leave. This helps teams know which customers may need attention early."
-)
+                If churn is high, go to the Insights tab to see whether the issue is linked to low activity, low feature usage, incomplete training, or billing problems.
+                """
+            )
 
-st.subheader("Churn Rate by Feature Usage")
 
-churn_by_feature_usage = (
-    filtered_df.groupby("feature_usage_level")["churned"]
-    .mean()
-    .reset_index()
-)
+with insights_tab:
+    st.subheader("Churn Rate by Plan Type")
 
-churn_by_feature_usage["churn_rate"] = churn_by_feature_usage["churned"] * 100
-
-fig_feature_usage = px.bar(
-    churn_by_feature_usage,
-    x="feature_usage_level",
-    y="churn_rate",
-    text=churn_by_feature_usage["churn_rate"].round(1),
-    labels={
-        "feature_usage_level": "Feature Usage",
-        "churn_rate": "Churn Rate (%)"
-    },
-    title="Percentage of Customers Who Left by Feature Usage"
-)
-
-fig_feature_usage.update_traces(texttemplate="%{text}%", textposition="outside")
-fig_feature_usage.update_layout(
-    yaxis_range=[0, churn_by_feature_usage["churn_rate"].max() + 10]
-)
-
-st.plotly_chart(fig_feature_usage, use_container_width=True)
-
-st.info(
-    "Customers who use fewer features are more likely to leave. This suggests that helping customers discover and use more features can improve retention."
-)
-
-st.subheader("Churn Rate by Training and Billing Status")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    churn_by_training = (
-        filtered_df.groupby("training_status")["churned"]
+    churn_by_plan = (
+        filtered_df.groupby("plan_type")["churned"]
         .mean()
         .reset_index()
     )
 
-    churn_by_training["churn_rate"] = churn_by_training["churned"] * 100
+    churn_by_plan["churn_rate"] = churn_by_plan["churned"] * 100
 
-    fig_training = px.bar(
-        churn_by_training,
-        x="training_status",
+    fig_plan = px.bar(
+        churn_by_plan,
+        x="plan_type",
         y="churn_rate",
-        text=churn_by_training["churn_rate"].round(1),
+        text=churn_by_plan["churn_rate"].round(1),
         labels={
-            "training_status": "Training Status",
+            "plan_type": "Plan Type",
             "churn_rate": "Churn Rate (%)"
         },
-        title="Customers Who Left by Training Status"
+        title="Percentage of Customers Who Left by Plan"
     )
 
-    fig_training.update_traces(texttemplate="%{text}%", textposition="outside")
-    fig_training.update_layout(
-        yaxis_range=[0, churn_by_training["churn_rate"].max() + 10]
+    fig_plan.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig_plan.update_layout(
+        yaxis_range=[0, churn_by_plan["churn_rate"].max() + 10]
     )
 
-    st.plotly_chart(fig_training, use_container_width=True)
+    st.plotly_chart(fig_plan, use_container_width=True)
 
-with col2:
-    churn_by_billing = (
-        filtered_df.groupby("billing_status")["churned"]
+    st.divider()
+
+    st.subheader("Churn Rate by Customer Activity")
+
+    churn_by_activity = (
+        filtered_df.groupby("activity_level")["churned"]
         .mean()
         .reset_index()
     )
 
-    churn_by_billing["churn_rate"] = churn_by_billing["churned"] * 100
+    churn_by_activity["churn_rate"] = churn_by_activity["churned"] * 100
 
-    fig_billing = px.bar(
-        churn_by_billing,
-        x="billing_status",
+    fig_activity = px.bar(
+        churn_by_activity,
+        x="activity_level",
         y="churn_rate",
-        text=churn_by_billing["churn_rate"].round(1),
+        text=churn_by_activity["churn_rate"].round(1),
         labels={
-            "billing_status": "Billing Status",
+            "activity_level": "Customer Activity",
             "churn_rate": "Churn Rate (%)"
         },
-        title="Customers Who Left by Billing Status"
+        title="Percentage of Customers Who Left by Activity Level"
     )
 
-    fig_billing.update_traces(texttemplate="%{text}%", textposition="outside")
-    fig_billing.update_layout(
-        yaxis_range=[0, churn_by_billing["churn_rate"].max() + 10]
+    fig_activity.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig_activity.update_layout(
+        yaxis_range=[0, churn_by_activity["churn_rate"].max() + 10]
     )
 
-    st.plotly_chart(fig_billing, use_container_width=True)
+    st.plotly_chart(fig_activity, use_container_width=True)
 
-st.info(
-    "Customers who do not complete training or have billing problems are more likely to leave. "
-    "This shows that onboarding and payment experience are important for retention."
-)
+    st.info(
+        "Customers with low activity are more likely to leave. This helps teams know which customers may need attention early."
+    )
 
-st.subheader("Key Findings")
-st.success(
-    """
-    - Customers with low activity are more likely to leave.
-    - Customers who use fewer features have a higher churn rate.
-    - Customers with billing problems are more likely to churn.
-    - Customers who complete training are more likely to stay.
-    - Enterprise customers show the lowest churn risk compared to other plans.
-    """
-)
+    st.divider()
 
-st.subheader("Predict Customer Churn Risk")
+    st.subheader("Churn Rate by Feature Usage")
 
-st.write(
-    "Enter a customer's details below to estimate how likely they are to leave."
-)
+    churn_by_feature_usage = (
+        filtered_df.groupby("feature_usage_level")["churned"]
+        .mean()
+        .reset_index()
+    )
 
-with st.form("churn_prediction_form"):
+    churn_by_feature_usage["churn_rate"] = churn_by_feature_usage["churned"] * 100
+
+    fig_feature_usage = px.bar(
+        churn_by_feature_usage,
+        x="feature_usage_level",
+        y="churn_rate",
+        text=churn_by_feature_usage["churn_rate"].round(1),
+        labels={
+            "feature_usage_level": "Feature Usage",
+            "churn_rate": "Churn Rate (%)"
+        },
+        title="Percentage of Customers Who Left by Feature Usage"
+    )
+
+    fig_feature_usage.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig_feature_usage.update_layout(
+        yaxis_range=[0, churn_by_feature_usage["churn_rate"].max() + 10]
+    )
+
+    st.plotly_chart(fig_feature_usage, use_container_width=True)
+
+    st.info(
+        "Customers who use fewer features are more likely to leave. This suggests that helping customers discover and use more features can improve retention."
+    )
+
+    st.divider()
+
+    st.subheader("Churn Rate by Training and Billing Status")
+
     col1, col2 = st.columns(2)
 
     with col1:
-        plan_type = st.selectbox(
-            "Plan Type",
-            ["Free", "Starter", "Pro", "Enterprise"]
+        churn_by_training = (
+            filtered_df.groupby("training_status")["churned"]
+            .mean()
+            .reset_index()
         )
 
-        company_size = st.selectbox(
-            "Company Size",
-            ["Small", "Medium", "Large"]
+        churn_by_training["churn_rate"] = churn_by_training["churned"] * 100
+
+        fig_training = px.bar(
+            churn_by_training,
+            x="training_status",
+            y="churn_rate",
+            text=churn_by_training["churn_rate"].round(1),
+            labels={
+                "training_status": "Training Status",
+                "churn_rate": "Churn Rate (%)"
+            },
+            title="Customers Who Left by Training Status"
         )
 
-        days_active_last_30 = st.slider(
-            "Days Active in the Last 30 Days",
-            min_value=0,
-            max_value=30,
-            value=10
+        fig_training.update_traces(texttemplate="%{text}%", textposition="outside")
+        fig_training.update_layout(
+            yaxis_range=[0, churn_by_training["churn_rate"].max() + 10]
         )
 
-        last_login_days_ago = st.slider(
-            "Days Since Last Login",
-            min_value=0,
-            max_value=30,
-            value=7
-        )
-
-        features_used = st.slider(
-            "Number of Features Used",
-            min_value=1,
-            max_value=10,
-            value=4
-        )
-
-        team_members_added = st.slider(
-            "Team Members Added",
-            min_value=0,
-            max_value=20,
-            value=3
-        )
+        st.plotly_chart(fig_training, use_container_width=True)
 
     with col2:
-        support_tickets = st.slider(
-            "Support Requests",
-            min_value=0,
-            max_value=5,
-            value=1
+        churn_by_billing = (
+            filtered_df.groupby("billing_status")["churned"]
+            .mean()
+            .reset_index()
         )
 
-        billing_status_input = st.selectbox(
-            "Billing Status",
-            ["No Billing Issues", "Has Billing Issues"]
+        churn_by_billing["churn_rate"] = churn_by_billing["churned"] * 100
+
+        fig_billing = px.bar(
+            churn_by_billing,
+            x="billing_status",
+            y="churn_rate",
+            text=churn_by_billing["churn_rate"].round(1),
+            labels={
+                "billing_status": "Billing Status",
+                "churn_rate": "Churn Rate (%)"
+            },
+            title="Customers Who Left by Billing Status"
         )
 
-        subscription_age_months = st.slider(
-            "Subscription Age in Months",
-            min_value=1,
-            max_value=36,
-            value=12
+        fig_billing.update_traces(texttemplate="%{text}%", textposition="outside")
+        fig_billing.update_layout(
+            yaxis_range=[0, churn_by_billing["churn_rate"].max() + 10]
         )
 
-        emails_opened_last_30 = st.slider(
-            "Emails Opened in the Last 30 Days",
-            min_value=0,
-            max_value=15,
-            value=5
-        )
+        st.plotly_chart(fig_billing, use_container_width=True)
 
-        training_status_input = st.selectbox(
-            "Training Status",
-            ["Training Not Completed", "Training Completed"]
-        )
-
-    submitted = st.form_submit_button("Predict Churn Risk")
-
-
-if submitted:
-    monthly_fee_map = {
-        "Free": 0,
-        "Starter": 29,
-        "Pro": 79,
-        "Enterprise": 249
-    }
-
-    input_data = pd.DataFrame({
-        "plan_type": [plan_type],
-        "company_size": [company_size],
-        "days_active_last_30": [days_active_last_30],
-        "last_login_days_ago": [last_login_days_ago],
-        "features_used": [features_used],
-        "team_members_added": [team_members_added],
-        "support_tickets": [support_tickets],
-        "billing_issues": [1 if billing_status_input == "Has Billing Issues" else 0],
-        "subscription_age_months": [subscription_age_months],
-        "emails_opened_last_30": [emails_opened_last_30],
-        "training_completed": [1 if training_status_input == "Training Completed" else 0],
-        "monthly_fee": [monthly_fee_map[plan_type]]
-    })
-
-    input_encoded = pd.get_dummies(input_data)
-
-    input_encoded = input_encoded.reindex(
-        columns=model_features,
-        fill_value=0
+    st.info(
+        "Customers who do not complete training or have billing problems are more likely to leave. "
+        "This shows that onboarding and payment experience are important for retention."
     )
 
-    churn_probability = model.predict_proba(input_encoded)[0][1] * 100
+    st.divider()
 
-    if churn_probability >= 70:
-        risk_level = "High Risk"
-        recommendation = (
-            "This customer may need urgent attention. Reach out personally, "
-            "check for blockers, and help them get more value from the product."
-        )
-    elif churn_probability >= 40:
-        risk_level = "Medium Risk"
-        recommendation = (
-            "This customer should be monitored. Encourage product usage, "
-            "offer support, and guide them toward useful features."
-        )
-    else:
-        risk_level = "Low Risk"
-        recommendation = (
-            "This customer looks relatively healthy. Keep supporting their product usage."
-        )
+    st.subheader("Key Findings")
 
-st.subheader("Prediction Result")
+    st.success(
+        """
+        - Customers with low activity are more likely to leave.
+        - Customers who use fewer features have a higher churn rate.
+        - Customers with billing problems are more likely to churn.
+        - Customers who complete training are more likely to stay.
+        - Enterprise customers show the lowest churn risk compared to other plans.
+        """
+    )
 
-result_col1, result_col2 = st.columns(2)
+with prediction_tab:
+    st.subheader("Predict Customer Churn Risk")
 
-with result_col1:
-    st.metric("Churn Risk Score", f"{churn_probability:.1f}%")
-
-with result_col2:
-    st.metric("Risk Level", risk_level)
-
-if risk_level == "High Risk":
-    st.error(recommendation)
-elif risk_level == "Medium Risk":
-    st.warning(recommendation)
-else:
-    st.success(recommendation)
-
-with st.expander("About this prediction"):
     st.markdown(
         """
-        This prediction is based on a machine learning model trained on customer behaviour data.
+        Enter a customer's details below to estimate how likely they are to leave.
 
-        The model looks at signals such as:
+        The prediction will show:
 
-        - How active the customer has been recently
-        - How many product features they use
-        - Whether they completed training
-        - Whether they had billing problems
-        - How many support requests they made
-        - Their plan type and subscription age
-
-        The score is not a final decision. It is a guide to help teams know which customers may need attention earlier.
+        - The customer's churn risk score
+        - The risk level
+        - A suggested action to take
         """
     )
 
-st.subheader("Customer Data Preview")
-preview_columns = [
-    "customer_id",
-    "plan_type",
-    "company_size",
-    "days_active_last_30",
-    "last_login_days_ago",
-    "features_used",
-    "support_tickets",
-    "training_status",
-    "billing_status",
-    "customer_status",
-    "monthly_fee"
-]
-st.dataframe(filtered_df[preview_columns].head())
+    with st.form("churn_prediction_form"):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            plan_type = st.selectbox(
+                "Plan Type",
+                ["Free", "Starter", "Pro", "Enterprise"]
+            )
+
+            company_size = st.selectbox(
+                "Company Size",
+                ["Small", "Medium", "Large"]
+            )
+
+            days_active_last_30 = st.slider(
+                "Days Active in the Last 30 Days",
+                min_value=0,
+                max_value=30,
+                value=10
+            )
+
+            last_login_days_ago = st.slider(
+                "Days Since Last Login",
+                min_value=0,
+                max_value=30,
+                value=7
+            )
+
+            features_used = st.slider(
+                "Number of Features Used",
+                min_value=1,
+                max_value=10,
+                value=4
+            )
+
+            team_members_added = st.slider(
+                "Team Members Added",
+                min_value=0,
+                max_value=20,
+                value=3
+            )
+
+        with col2:
+            support_tickets = st.slider(
+                "Support Requests",
+                min_value=0,
+                max_value=5,
+                value=1
+            )
+
+            billing_status_input = st.selectbox(
+                "Billing Status",
+                ["No Billing Issues", "Has Billing Issues"]
+            )
+
+            subscription_age_months = st.slider(
+                "Subscription Age in Months",
+                min_value=1,
+                max_value=36,
+                value=12
+            )
+
+            emails_opened_last_30 = st.slider(
+                "Emails Opened in the Last 30 Days",
+                min_value=0,
+                max_value=15,
+                value=5
+            )
+
+            training_status_input = st.selectbox(
+                "Training Status",
+                ["Training Not Completed", "Training Completed"]
+            )
+
+        submitted = st.form_submit_button("Predict Churn Risk")
+
+    if submitted:
+        monthly_fee_map = {
+            "Free": 0,
+            "Starter": 29,
+            "Pro": 79,
+            "Enterprise": 249
+        }
+
+        input_data = pd.DataFrame({
+            "plan_type": [plan_type],
+            "company_size": [company_size],
+            "days_active_last_30": [days_active_last_30],
+            "last_login_days_ago": [last_login_days_ago],
+            "features_used": [features_used],
+            "team_members_added": [team_members_added],
+            "support_tickets": [support_tickets],
+            "billing_issues": [1 if billing_status_input == "Has Billing Issues" else 0],
+            "subscription_age_months": [subscription_age_months],
+            "emails_opened_last_30": [emails_opened_last_30],
+            "training_completed": [1 if training_status_input == "Training Completed" else 0],
+            "monthly_fee": [monthly_fee_map[plan_type]]
+        })
+
+        input_encoded = pd.get_dummies(input_data)
+
+        input_encoded = input_encoded.reindex(
+            columns=model_features,
+            fill_value=0
+        )
+
+        churn_probability = model.predict_proba(input_encoded)[0][1] * 100
+
+        if churn_probability >= 70:
+            risk_level = "High Risk"
+            recommendation = (
+                "This customer may need urgent attention. Reach out personally, "
+                "check for blockers, and help them get more value from the product."
+            )
+        elif churn_probability >= 40:
+            risk_level = "Medium Risk"
+            recommendation = (
+                "This customer should be monitored. Encourage product usage, "
+                "offer support, and guide them toward useful features."
+            )
+        else:
+            risk_level = "Low Risk"
+            recommendation = (
+                "This customer looks relatively healthy. Keep supporting their product usage."
+            )
+
+        st.subheader("Prediction Result")
+
+        result_col1, result_col2 = st.columns(2)
+
+        with result_col1:
+            st.metric("Churn Risk Score", f"{churn_probability:.1f}%")
+
+        with result_col2:
+            st.metric("Risk Level", risk_level)
+
+        if risk_level == "High Risk":
+            st.error(recommendation)
+        elif risk_level == "Medium Risk":
+            st.warning(recommendation)
+        else:
+            st.success(recommendation)
+
+        with st.expander("About this prediction"):
+            st.markdown(
+                """
+                This prediction is based on customer behaviour.
+
+                The model looks at things like:
+
+                - How often the customer uses the product
+                - How many features they use
+                - Whether they completed training
+                - Whether they had billing problems
+                - How many support requests they made
+                - Their plan type and subscription age
+
+                The score is not a final decision. It is a guide to help teams know which customers may need attention earlier.
+                """
+            )
+ 
+
+with data_tab:
+    st.subheader("Customer Data Preview")
+
+    st.markdown(
+        """
+        This table shows a sample of the customer records being used in the dashboard.
+
+        The table uses simple labels where possible, so non-technical users can understand the customer status, training status, and billing status.
+        """
+    )
+
+    preview_columns = [
+        "customer_id",
+        "plan_type",
+        "company_size",
+        "days_active_last_30",
+        "last_login_days_ago",
+        "features_used",
+        "support_tickets",
+        "training_status",
+        "billing_status",
+        "customer_status",
+        "monthly_fee"
+    ]
+
+    st.dataframe(
+        filtered_df[preview_columns],
+        use_container_width=True
+    )
