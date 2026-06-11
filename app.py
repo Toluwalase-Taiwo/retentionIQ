@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import joblib
 
 
 st.set_page_config(
@@ -14,8 +15,15 @@ st.set_page_config(
 def load_data():
     return pd.read_csv("data/saas_churn_data.csv")
 
+@st.cache_resource
+def load_model():
+    model = joblib.load("models/churn_model.pkl")
+    model_features = joblib.load("models/model_features.pkl")
+    return model, model_features
 
 df = load_data()
+model, model_features = load_model()
+
 
 df["training_status"] = df["training_completed"].map({
     0: "Training Not Completed",
@@ -280,7 +288,155 @@ st.info(
     "This shows that onboarding and payment experience are important for retention."
 )
 
-st.subheader("Dataset Preview")
+st.subheader("Key Findings")
+st.success(
+    """
+    - Customers with low activity are more likely to leave.
+    - Customers who use fewer features have a higher churn rate.
+    - Customers with billing problems are more likely to churn.
+    - Customers who complete training are more likely to stay.
+    - Enterprise customers show the lowest churn risk compared to other plans.
+    """
+)
+
+st.subheader("Predict Customer Churn Risk")
+
+st.write(
+    "Enter a customer's details below to estimate how likely they are to leave."
+)
+
+with st.form("churn_prediction_form"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        plan_type = st.selectbox(
+            "Plan Type",
+            ["Free", "Starter", "Pro", "Enterprise"]
+        )
+
+        company_size = st.selectbox(
+            "Company Size",
+            ["Small", "Medium", "Large"]
+        )
+
+        days_active_last_30 = st.slider(
+            "Days Active in the Last 30 Days",
+            min_value=0,
+            max_value=30,
+            value=10
+        )
+
+        last_login_days_ago = st.slider(
+            "Days Since Last Login",
+            min_value=0,
+            max_value=30,
+            value=7
+        )
+
+        features_used = st.slider(
+            "Number of Features Used",
+            min_value=1,
+            max_value=10,
+            value=4
+        )
+
+        team_members_added = st.slider(
+            "Team Members Added",
+            min_value=0,
+            max_value=20,
+            value=3
+        )
+
+    with col2:
+        support_tickets = st.slider(
+            "Support Requests",
+            min_value=0,
+            max_value=5,
+            value=1
+        )
+
+        billing_status_input = st.selectbox(
+            "Billing Status",
+            ["No Billing Issues", "Has Billing Issues"]
+        )
+
+        subscription_age_months = st.slider(
+            "Subscription Age in Months",
+            min_value=1,
+            max_value=36,
+            value=12
+        )
+
+        emails_opened_last_30 = st.slider(
+            "Emails Opened in the Last 30 Days",
+            min_value=0,
+            max_value=15,
+            value=5
+        )
+
+        training_status_input = st.selectbox(
+            "Training Status",
+            ["Training Not Completed", "Training Completed"]
+        )
+
+    submitted = st.form_submit_button("Predict Churn Risk")
+
+
+if submitted:
+    monthly_fee_map = {
+        "Free": 0,
+        "Starter": 29,
+        "Pro": 79,
+        "Enterprise": 249
+    }
+
+    input_data = pd.DataFrame({
+        "plan_type": [plan_type],
+        "company_size": [company_size],
+        "days_active_last_30": [days_active_last_30],
+        "last_login_days_ago": [last_login_days_ago],
+        "features_used": [features_used],
+        "team_members_added": [team_members_added],
+        "support_tickets": [support_tickets],
+        "billing_issues": [1 if billing_status_input == "Has Billing Issues" else 0],
+        "subscription_age_months": [subscription_age_months],
+        "emails_opened_last_30": [emails_opened_last_30],
+        "training_completed": [1 if training_status_input == "Training Completed" else 0],
+        "monthly_fee": [monthly_fee_map[plan_type]]
+    })
+
+    input_encoded = pd.get_dummies(input_data)
+
+    input_encoded = input_encoded.reindex(
+        columns=model_features,
+        fill_value=0
+    )
+
+    churn_probability = model.predict_proba(input_encoded)[0][1] * 100
+
+    if churn_probability >= 70:
+        risk_level = "High Risk"
+        recommendation = (
+            "This customer may need urgent attention. Reach out personally, "
+            "check for blockers, and help them get more value from the product."
+        )
+    elif churn_probability >= 40:
+        risk_level = "Medium Risk"
+        recommendation = (
+            "This customer should be monitored. Encourage product usage, "
+            "offer support, and guide them toward useful features."
+        )
+    else:
+        risk_level = "Low Risk"
+        recommendation = (
+            "This customer looks relatively healthy. Keep supporting their product usage."
+        )
+
+    st.metric("Churn Risk Score", f"{churn_probability:.1f}%")
+    st.info(f"Risk Level: {risk_level}")
+    st.write(f"Recommended Action: {recommendation}")
+
+st.subheader("Customer Data Preview")
 preview_columns = [
     "customer_id",
     "plan_type",
@@ -294,5 +450,4 @@ preview_columns = [
     "customer_status",
     "monthly_fee"
 ]
-
 st.dataframe(filtered_df[preview_columns].head())
